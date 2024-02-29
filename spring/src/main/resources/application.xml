@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context" xmlns:task="http://www.springframework.org/schema/task" xsi:schemaLocation="http://www.springframework.org/schema/beans
+        https://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/task
+        http://www.springframework.org/schema/task/spring-task.xsd">
+    <!-- 配置文件 -->
+    <context:property-placeholder location="classpath:jdbc.properties"/>
+	<!-- 其他的bean定义 -->
+	<bean id="testScheduleService" class="me.iaksh.service.TestScheduleService" />
+	<bean id="chatMessageService" class="me.iaksh.service.ChatMessageService">
+		<property name="chatMessageMapper" ref="chatMessageMapper" />
+	</bean>
+	<bean id="chatRoomService" class="me.iaksh.service.ChatRoomService">
+		<property name="chatRoomMapper" ref="chatRoomMapper" />
+	</bean>
+	<bean id="chatController" class="me.iaksh.controller.ChatController">
+		<property name="chatRoomService" ref="chatRoomService" />
+		<property name="chatMessageService" ref="chatMessageService" />
+	</bean>
+	<bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource">
+		<property name="jdbcUrl" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		<property name="autoCommit" value="false" />
+		<property name="connectionTimeout" value="250" />
+		<property name="idleTimeout" value="60" />
+	</bean>
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean id="chatRoomMapper" class="org.mybatis.spring.mapper.MapperFactoryBean">
+		<property name="mapperInterface" value="me.iaksh.mapper.ChatRoomMapper" />
+		<property name="sqlSessionFactory" ref="sqlSessionFactory" />
+	</bean>
+	<bean id="chatMessageMapper" class="org.mybatis.spring.mapper.MapperFactoryBean">
+		<property name="mapperInterface" value="me.iaksh.mapper.ChatMessageMapper" />
+		<property name="sqlSessionFactory" ref="sqlSessionFactory" />
+	</bean>
+	<!-- 启用注解驱动，spring才能识别@Scheduled注解 -->
+	<task:annotation-driven scheduler="taskScheduler" mode="proxy" />
+	<!-- 配置定时任务线程池线程数量， 官方推荐pool-size：5-10 -->
+	<task:scheduler id="taskScheduler" pool-size="10" />
+	<!-- 配置定时规则 ref：指定的类，即任务类 method：指定的即需要运⾏的⽅法 cron：cronExpression表达式 -->
+	<task:scheduled-tasks>
+		<!-- 每个两秒执执行一次任务 -->
+		<task:scheduled ref="testScheduleService" method="task1" cron="0/2 * * * * ?" />
+		<!-- 每隔五秒执行一次任务 -->
+		<task:scheduled ref="testScheduleService" method="task2" cron="0/5 * * * * ?" />
+		<!-- 多个定时任务 在这里配置 -->
+	</task:scheduled-tasks>
+</beans>
